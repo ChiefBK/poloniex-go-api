@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"log"
 )
 
 func New(apiKey, apiSecret string) *Poloniex {
@@ -202,8 +203,8 @@ func (p *Poloniex) ReturnActiveLoans(respCh chan *ReturnActiveLoansResponse) {
 	respCh <- activeLoansResponse
 }
 
-func (p *Poloniex) ReturnChartData(currencyPair string, period int, start, end time.Time, respCh chan *ReturnChartDataResponse){
-	defer close(respCh)
+func (p *Poloniex) ReturnChartData(currencyPair string, period int, start, end time.Time) (chartDataResponse *ReturnChartDataResponse) {
+	log.Println("Returning Chart Data")
 
 	data := make(map[string]string)
 	data["currencyPair"] = currencyPair
@@ -213,18 +214,17 @@ func (p *Poloniex) ReturnChartData(currencyPair string, period int, start, end t
 
 	res, err := p.Client.do("GET", "returnChartData", data)
 
-	chartDataResponse := new(ReturnChartDataResponse)
+	chartDataResponse = new(ReturnChartDataResponse)
 
 	if err != nil {
 		chartDataResponse.Response = nil
 		chartDataResponse.Err = err
-		respCh <- chartDataResponse
 		return
 	}
 
 	json.Unmarshal(res, &chartDataResponse.Response)
 	chartDataResponse.Err = nil
-	respCh <- chartDataResponse
+	return
 }
 
 func PrintResponse(resp interface{}) {
