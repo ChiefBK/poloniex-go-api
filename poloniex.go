@@ -3,8 +3,8 @@ package poloniex_go_api
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"log"
+	"time"
 )
 
 func New(apiKey, apiSecret string) *Poloniex {
@@ -17,7 +17,7 @@ type Poloniex struct {
 }
 
 func (p *Poloniex) ReturnTicker() (resp *ReturnTickerResponse) {
-	clientRes, _ := p.Client.do("GET", "returnTicker", nil)
+	clientRes, _ := p.Client.Do("GET", "returnTicker", nil)
 
 	resp = new(ReturnTickerResponse)
 	err := json.Unmarshal(clientRes, &resp.Response)
@@ -34,10 +34,10 @@ func (p *Poloniex) ReturnTicker() (resp *ReturnTickerResponse) {
 }
 
 func (p *Poloniex) ReturnOpenLoanOffers() (resp *ReturnOpenLoanOffersResponse) {
-	clientRes, clientResError := p.Client.do("POST", "returnOpenLoanOffers", nil)
+	clientRes, clientResError := p.Client.Do("POST", "returnOpenLoanOffers", nil)
 
 	if clientResError != nil {
-		fmt.Println("error making request (do)")
+		fmt.Println("error making request (Do)")
 	}
 
 	resp = new(ReturnOpenLoanOffersResponse)
@@ -58,7 +58,7 @@ func (p *Poloniex) ReturnLoanOrders(respCh chan *ReturnLoanOrdersResponse) {
 	data := make(map[string]string)
 	data["currency"] = "BTC"
 
-	res, err := p.Client.do("GET", "returnLoanOrders", data)
+	res, err := p.Client.Do("GET", "returnLoanOrders", data)
 
 	returnLoanOrders := new(ReturnLoanOrdersResponse)
 
@@ -99,12 +99,12 @@ func (p *Poloniex) ReturnLoanOffers(offersCh chan []*Order) {
 func (p *Poloniex) ReturnBalances(respCh chan *ReturnBalancesResponse) {
 	defer close(respCh)
 
-	res, err := p.Client.do("POST", "returnBalances", nil)
+	res, err := p.Client.Do("POST", "returnBalances", nil)
 
 	balancesResp := new(ReturnBalancesResponse)
 
 	if err != nil {
-		fmt.Println("error making request (do)")
+		fmt.Println("error making request (Do)")
 		balancesResp.Err = err
 		balancesResp.Response = nil
 		respCh <- balancesResp
@@ -125,41 +125,36 @@ func (p *Poloniex) ReturnBalances(respCh chan *ReturnBalancesResponse) {
 	respCh <- balancesResp
 }
 
-func (p *Poloniex) ReturnCompleteBalancesBtc(balanceCh chan *Balance) {
-	defer close(balanceCh)
+func (p *Poloniex) ReturnCompleteBalancesBtc() Balance {
+	completeBalances := p.ReturnCompleteBalances()
 
-	completeBalancesCh := make(chan *ReturnCompleteBalancesResponse)
-
-	go p.ReturnCompleteBalances(completeBalancesCh)
-
-	completeBalances := <-completeBalancesCh
-
-	balance := new(Balance)
-	balance.Available = completeBalances.Response["BTC"].Available
-	balance.BtcValue = completeBalances.Response["BTC"].BtcValue
-	balance.OnOrders = completeBalances.Response["BTC"].OnOrders
-	balanceCh <- balance
+	balance := Balance{}
+	balance.Available = completeBalances.Data["BTC"].Available
+	balance.BtcValue = completeBalances.Data["BTC"].BtcValue
+	balance.OnOrders = completeBalances.Data["BTC"].OnOrders
+	return balance
 }
 
-func (p *Poloniex) ReturnCompleteBalances(respCh chan *ReturnCompleteBalancesResponse) {
+func (p *Poloniex) ReturnCompleteBalances() (response *ReturnCompleteBalancesResponse) {
 	data := make(map[string]string)
 	data["account"] = "all"
-	clientRes, clientResError := p.Client.do("POST", "returnCompleteBalances", data)
+	clientRes, clientResError := p.Client.Do("POST", "returnCompleteBalances", data)
 
 	if clientResError != nil {
-		fmt.Println("error making request (do)")
+		fmt.Println("error making request (Do)")
 	}
 
 	resp := new(ReturnCompleteBalancesResponse)
-	err := json.Unmarshal(clientRes, &resp.Response)
+	err := json.Unmarshal(clientRes, &resp.Data)
 
 	if err == nil {
 		resp.Err = nil
-		respCh <- resp
+		response = resp
 	} else {
 		resp.Err = err
-		respCh <- resp
+		response = nil
 	}
+	return
 }
 
 func (p *Poloniex) ReturnLendingHistory(start, end time.Time, respCh chan *ReturnLendingHistoryResponse) {
@@ -168,7 +163,7 @@ func (p *Poloniex) ReturnLendingHistory(start, end time.Time, respCh chan *Retur
 	data := make(map[string]string)
 	data["start"] = fmt.Sprintf("%d", start.Unix())
 	data["end"] = fmt.Sprintf("%d", end.Unix())
-	res, err := p.Client.do("POST", "returnLendingHistory", data)
+	res, err := p.Client.Do("POST", "returnLendingHistory", data)
 
 	lendingHistoryResponse := new(ReturnLendingHistoryResponse)
 
@@ -184,23 +179,20 @@ func (p *Poloniex) ReturnLendingHistory(start, end time.Time, respCh chan *Retur
 	respCh <- lendingHistoryResponse
 }
 
-func (p *Poloniex) ReturnActiveLoans(respCh chan *ReturnActiveLoansResponse) {
-	defer close(respCh)
+func (p *Poloniex) ReturnActiveLoans() (activeLoansResponse *ReturnActiveLoansResponse) {
+	res, err := p.Client.Do("POST", "returnActiveLoans", nil)
 
-	res, err := p.Client.do("POST", "returnActiveLoans", nil)
-
-	activeLoansResponse := new(ReturnActiveLoansResponse)
+	activeLoansResponse = new(ReturnActiveLoansResponse)
 
 	if err != nil {
 		activeLoansResponse.Response = nil
 		activeLoansResponse.Err = err
-		respCh <- activeLoansResponse
 		return
 	}
 
 	json.Unmarshal(res, &activeLoansResponse.Response)
 	activeLoansResponse.Err = nil
-	respCh <- activeLoansResponse
+	return
 }
 
 func (p *Poloniex) ReturnChartData(currencyPair string, period int, start, end time.Time) (chartDataResponse *ReturnChartDataResponse) {
@@ -212,7 +204,7 @@ func (p *Poloniex) ReturnChartData(currencyPair string, period int, start, end t
 	data["start"] = fmt.Sprintf("%d", start.Unix())
 	data["end"] = fmt.Sprintf("%d", end.Unix())
 
-	res, err := p.Client.do("GET", "returnChartData", data)
+	res, err := p.Client.Do("GET", "returnChartData", data)
 
 	chartDataResponse = new(ReturnChartDataResponse)
 
@@ -226,6 +218,8 @@ func (p *Poloniex) ReturnChartData(currencyPair string, period int, start, end t
 	chartDataResponse.Err = nil
 	return
 }
+
+//func (p *Poloniex) Return
 
 func PrintResponse(resp interface{}) {
 	j, _ := json.Marshal(resp)

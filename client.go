@@ -1,16 +1,16 @@
 package poloniex_go_api
 
 import (
-	"net/http"
-	"io/ioutil"
-	"errors"
-	"time"
-	"fmt"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const (
@@ -124,7 +124,7 @@ func (c *Client) makeRequest(method, command string, args map[string]string, res
 }
 
 // do prepare and process HTTP request to Poloniex API
-func (c *Client) do(method, command string, args map[string]string) (response []byte, err error) {
+func (c *Client) Do(method, command string, args map[string]string) (response []byte, err error) {
 	respCh := make(chan []byte)
 	errCh := make(chan error)
 	<-c.throttle
